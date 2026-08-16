@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>DualSense Signing Tester</title>
+	<style>
+		:root {
+			--accent: #6366f1;
+			--accent2: #818cf8;
+			--ink: #fff;
+			--muted: #9aa3bd;
+			--card: #ffffff0d;
+			--line: #ffffff1a;
+			--bg: #12141c;
+		}
+
+		* {
+			box-sizing: border-box
+		}
+
+		body {
+			margin: 0;
+			min-height: 100vh;
+			color: var(--ink);
+			font-family: Avenir, "Segoe UI", Helvetica, Arial, sans-serif;
+			background: linear-gradient(#6366f114 0%, #0000 32%), var(--bg);
+			display: flex;
+			justify-content: center;
+			padding: 56px 20px 40px;
+		}
+
+		.wrap {
+			width: 100%;
+			max-width: 440px;
+			text-align: center
+		}
+
+		h1 {
+			font-size: 26px;
+			font-weight: 800;
+			margin: 0 0 6px;
+			background: linear-gradient(#c7d2fe, #fff 60%);
+			-webkit-background-clip: text;
+			background-clip: text;
+			color: transparent;
+		}
+
+		.sub {
+			color: var(--muted);
+			margin: 0 0 28px;
+			font-size: 14px;
+			line-height: 1.5
+		}
+
+		button {
+			font: inherit;
+			font-weight: 700;
+			font-size: 15px;
+			cursor: pointer;
+			color: #fff;
+			background: var(--accent);
+			border: 0;
+			border-radius: .6em;
+			padding: 12px 22px;
+			transition: background .12s, transform .05s;
+		}
+
+		button:hover {
+			background: var(--accent2)
+		}
+
+		button:active {
+			transform: translateY(1px)
+		}
+
+		button.ghost {
+			background: #ffffff12;
+			color: var(--ink)
+		}
+
+		button.ghost:hover {
+			background: #ffffff1f
+		}
+
+		button:disabled {
+			opacity: .5;
+			cursor: not-allowed
+		}
+
+		#panel {
+			margin-top: 8px
+		}
+
+		.dev {
+			color: var(--muted);
+			font-size: 13px;
+			margin-bottom: 16px
+		}
+
+		.dev b {
+			color: var(--ink)
+		}
+
+		.verdict {
+			border-radius: .9em;
+			padding: 20px 18px;
+			margin-bottom: 22px;
+			font-size: 17px;
+			font-weight: 800;
+			line-height: 1.35;
+			background: var(--card);
+			border: 1px solid var(--line)
+		}
+
+		.verdict .note {
+			display: block;
+			font-size: 12.5px;
+			font-weight: 500;
+			color: var(--muted);
+			margin-top: 8px
+		}
+
+		.verdict.ok {
+			background: linear-gradient(#22c55e26, #22c55e0d);
+			border-color: #22c55e59
+		}
+
+		.verdict.warn {
+			background: linear-gradient(#eab30826, #eab3080d);
+			border-color: #eab30859
+		}
+
+		.verdict.bad {
+			background: linear-gradient(#ef444426, #ef44440d);
+			border-color: #ef444459
+		}
+
+		.checks {
+			background: var(--card);
+			border: 1px solid var(--line);
+			border-radius: .9em;
+			overflow: hidden;
+			text-align: left
+		}
+
+		.check {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			padding: 15px 18px
+		}
+
+		.check+.check {
+			border-top: 1px solid var(--line)
+		}
+
+		.check .label {
+			font-weight: 600
+		}
+
+		.pill {
+			font-size: 12px;
+			font-weight: 800;
+			padding: 5px 12px;
+			border-radius: 999px;
+			white-space: nowrap
+		}
+
+		.pill.wait {
+			background: #ffffff1a;
+			color: var(--muted)
+		}
+
+		.pill.ok {
+			background: #22c55e;
+			color: #0a2a12
+		}
+
+		.pill.warn {
+			background: #eab308;
+			color: #332800
+		}
+
+		.pill.bad {
+			background: #ef4444;
+			color: #3a0a0a
+		}
+
+		#again {
+			margin-top: 22px
+		}
+
+		.warnbox {
+			margin-top: 22px;
+			background: #ef44441a;
+			border: 1px solid #ef444459;
+			color: #fca5a5;
+			border-radius: .7em;
+			padding: 14px 16px;
+			font-size: 13px;
+			line-height: 1.5;
+			text-align: left
+		}
+	</style>
+</head>
+
+<body>
+	<div class="wrap">
+		<h1>DualSense Signing Tester</h1>
+		<p class="sub">Checks if a controller signs its inputs like a genuine PS5 controller</p>
+		<button id="connect">Connect controller</button>
+		<div id="panel" hidden>
+			<div class="dev" id="devname"></div>
+			<div class="verdict" id="verdict"></div>
+			<div class="checks">
+				<div class="check"><span class="label">DualSense controller</span><span class="pill wait" id="p_ident">…</span>
+				</div>
+				<div class="check"><span class="label">Signed inputs</span><span class="pill wait" id="p_sign">…</span></div>
+			</div>
+			<button id="again" class="ghost">Test again</button>
+		</div>
+		<div class="warnbox" id="ctxwarn" hidden></div>
+	</div>
+
+	<script>
+		"use strict";
+
+		const FILTERS = [
+			{ vendorId: 0x054C, productId: 0x0CE6 }, // Sony DualSense
+			{ vendorId: 0x054C, productId: 0x0DF2 }, // Sony DualSense Edge
+		];
+
+		const $ = s => document.querySelector(s);
+		let dev = null;
+
+		const pill = (id, cls, text) => { $("#p_" + id).className = "pill " + cls; $("#p_" + id).textContent = text; };
+		const verdict = (cls, text, note) => {
+			$("#verdict").className = "verdict " + cls;
+			$("#verdict").innerHTML = text + (note ? `<span class="note">${note}</span>` : "");
+		};
+		const feat = async id => { try { return new Uint8Array((await dev.receiveFeatureReport(id)).buffer); } catch { return null; } };
+
+		async function identity() {
+			let identityOK = true;
+			for (const id of [0x05, 0x09, 0x20]) if (!await feat(id)) identityOK = false;
+			pill("ident", identityOK ? "ok" : "bad", identityOK ? "Yes" : "No");
+			return identityOK;
+		}
+
+		const SIGN = { none: ["warn", "No input"], unsigned: ["bad", "Unsigned"], static: ["warn", "Static"], signed: ["ok", "Signed"] };
+		function signing() {
+			return new Promise(done => {
+				const caps = [];
+				const on = ev => {
+					if (ev.reportId === 0x01 && caps.length < 40) {
+						const f = new Uint8Array(1 + ev.data.byteLength); f[0] = 1; f.set(new Uint8Array(ev.data.buffer), 1); caps.push(f);
+					}
+				};
+				dev.addEventListener("inputreport", on);
+				setTimeout(() => {
+					dev.removeEventListener("inputreport", on);
+					let key = "none";
+					if (caps.length) {
+						let changed = 0, nz = false, prev = null;
+						for (const r of caps) {
+							const t = r.slice(-8); nz ||= t.some(x => x);
+							if (prev && t.some((x, i) => x !== prev[i])) changed++; prev = t;
+						}
+						const rate = changed / (caps.length - 1 || 1);
+						key = !nz ? "unsigned" : rate > 0.8 ? "signed" : "static";
+					}
+					pill("sign", ...SIGN[key]); done(key);
+				}, 1200);
+			});
+		}
+
+		async function run() {
+			$("#again").disabled = true;
+			pill("ident", "wait", "…"); pill("sign", "wait", "…"); verdict("", "Testing…");
+			const isDS = await identity();
+			const sign = await signing();
+			if (sign === "signed") verdict("ok", "Inputs are signed", "This controller signs its input reports like a real PS5 pad");
+			else if (isDS) verdict("warn", "Inputs not signing", "Its input reports don't carry a changing per-report signature");
+			else verdict("bad", "Not a DualSense", "This isn't a PS5-style controller.");
+			$("#again").disabled = false;
+		}
+
+		async function connect() {
+			try {
+				const [d] = await navigator.hid.requestDevice({ filters: FILTERS });
+				if (!d) return;
+				if (!d.opened) await d.open();
+				dev = d;
+				$("#devname").innerHTML = `Connected: <b>${d.productName || "controller"}</b>`;
+				$("#connect").hidden = true; $("#panel").hidden = false;
+				run();
+			} catch { }
+		}
+
+		$("#connect").onclick = connect;
+		$("#again").onclick = run;
+		if (!("hid" in navigator)) {
+			$("#connect").disabled = true;
+			$("#ctxwarn").hidden = false;
+			$("#ctxwarn").innerHTML = "WebHID isn't available. Use <b>Chrome or Edge</b>";
+		}
+	</script>
+</body>
+
+</html>
