@@ -227,10 +227,6 @@
 	<script>
 		"use strict";
 
-		const FILTERS = [
-			{ vendorId: 0x054C, productId: 0x0CE6 }, // Sony DualSense
-			{ vendorId: 0x054C, productId: 0x0DF2 }, // Sony DualSense Edge
-		];
 
 		const $ = s => document.querySelector(s);
 		let dev = null;
@@ -289,7 +285,7 @@
 
 		async function connect() {
 			try {
-				const [d] = await navigator.hid.requestDevice({ filters: FILTERS });
+				const [d] = await navigator.hid.requestDevice({ filters: [] });
 				if (!d) return;
 				if (!d.opened) await d.open();
 				dev = d;
